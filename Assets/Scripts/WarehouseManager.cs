@@ -21,7 +21,7 @@ public class WarehouseManager : MonoBehaviour
 
     private void Start()
     {
-        //GenerateWarehouse();
+        GenerateWarehouse();
     }
 
     public void GenerateWarehouse()

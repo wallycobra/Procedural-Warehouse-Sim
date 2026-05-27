@@ -426,8 +426,8 @@ Camera:
   m_GameObject: {fileID: 330585543}
   m_Enabled: 1
   serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_ClearFlags: 2
+  m_BackGroundColor: {r: 0.17101279, g: 0.33563986, b: 0.5943396, a: 0}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -451,8 +451,8 @@ Camera:
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 60
-  orthographic: 0
-  orthographic size: 5
+  orthographic: 1
+  orthographic size: 10
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -476,8 +476,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.2164396, y: 0, z: 0, w: 0.97629607}
-  m_LocalPosition: {x: 10, y: 9.66, z: -10}
+  m_LocalRotation: {x: 0.19842474, y: 0.22841944, z: -0.047611505, w: 0.9519377}
+  m_LocalPosition: {x: -9.374623, y: 21.661167, z: -29.255299}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -985,6 +985,9 @@ MonoBehaviour:
   floorPrefab: {fileID: 8264209146806628664, guid: d88acbad691d87240aa9d60d0919f959, type: 3}
   pathPrefab: {fileID: 1038109036573104661, guid: 1641acae37658b0488a181154791beee, type: 3}
   parkingPrefab: {fileID: 7500542591981645208, guid: 02e8e859984dfd24e9cb9ce6caba8213, type: 3}
+  pathPrefabCorner: {fileID: 1038109036573104661, guid: 67019ab141aa01245961514a8a719a9d, type: 3}
+  pathPrefabThreeWay: {fileID: 1038109036573104661, guid: a6db41294a063744fa585e845df112fb, type: 3}
+  pathPrefabDeadEnd: {fileID: 1038109036573104661, guid: a0a0c33f9b8f22b46aaf738495b3037b, type: 3}
 --- !u!114 &1733927352
 MonoBehaviour:
   m_ObjectHideFlags: 0

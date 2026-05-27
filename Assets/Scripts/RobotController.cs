@@ -5,6 +5,7 @@ using UnityEngine;
 public class RobotController : MonoBehaviour
 {
     [SerializeField] private float moveSpeed = 3f;
+    [SerializeField] private float rotationSpeed = 8f;
 
     private WarehouseGrid grid;
     private float cellSize;
@@ -69,6 +70,22 @@ public class RobotController : MonoBehaviour
 
             while (Vector3.Distance(transform.position, targetPosition) > 0.05f)
             {
+                Vector3 direction =
+                    (targetPosition - transform.position).normalized;
+
+                direction.y = 0f;
+
+                if (direction != Vector3.zero)
+                {
+                    Quaternion targetRotation =
+                        Quaternion.LookRotation(direction);
+
+                    transform.rotation = Quaternion.Slerp(
+                        transform.rotation,
+                        targetRotation,
+                        rotationSpeed * Time.deltaTime);
+                }
+
                 transform.position = Vector3.MoveTowards(
                     transform.position,
                     targetPosition,

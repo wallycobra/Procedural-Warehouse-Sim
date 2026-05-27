@@ -16,6 +16,7 @@ public class WarehouseGrid
         nodes = new GridNode[width, height];
 
         InitializeNodes();
+        ConnectNeighbors();
     }
 
     private void InitializeNodes()
@@ -133,5 +134,21 @@ public class WarehouseGrid
         }
 
         return null;
+    }
+
+    private void ConnectNeighbors()
+    {
+        for (int x = 0; x < Width; x++)
+        {
+            for (int z = 0; z < Height; z++)
+            {
+                GridNode node = nodes[x, z];
+
+                node.North = GetNode(x, z + 1);
+                node.South = GetNode(x, z - 1);
+                node.East = GetNode(x + 1, z);
+                node.West = GetNode(x - 1, z);
+            }
+        }
     }
 }
