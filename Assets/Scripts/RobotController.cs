@@ -13,11 +13,13 @@ public class RobotController : MonoBehaviour
 
     private WarehouseGrid grid;
     private float cellSize;
+    private Transform warehouseTransform;
 
-    public void Initialize(WarehouseGrid warehouseGrid, GridNode startParkingNode, float gridCellSize)
+    public void Initialize(WarehouseGrid warehouseGrid, GridNode startParkingNode, float gridCellSize, Transform warehouseTransform)
     {
         grid = warehouseGrid;
         cellSize = gridCellSize;
+        this.warehouseTransform = warehouseTransform;
 
         GridNode startPathNode = grid.GetAdjacentPathNode(startParkingNode);
 
@@ -200,7 +202,7 @@ public class RobotController : MonoBehaviour
         yield return new WaitForSeconds(2);
 
         // Detach from robot
-        carriedObject.transform.SetParent(null);
+        carriedObject.transform.SetParent(warehouseTransform);
 
         // Re-enable physics
         carriedObject.isKinematic = false;

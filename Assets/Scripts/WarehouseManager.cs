@@ -88,7 +88,7 @@ public class WarehouseManager : MonoBehaviour
             return;
         }
 
-        robot.Initialize(Grid, parkingNode, cellSize);
+        robot.Initialize(Grid, parkingNode, cellSize, warehouseContainer.transform);
     }
 
     public void SaveCurrentWarehouse()
