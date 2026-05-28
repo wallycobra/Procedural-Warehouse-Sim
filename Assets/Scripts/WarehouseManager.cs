@@ -14,6 +14,10 @@ public class WarehouseManager : MonoBehaviour
     [SerializeField] private WarehouseRenderer renderer;
     [SerializeField] private WarehouseApiClient apiClient;
     [SerializeField] private GameObject robotPrefab;
+    [SerializeField] private GameObject warehouseContainer;
+
+    [SerializeField] private List<GridNode> parkingNodes;
+    [SerializeField] private List<GridNode> dropoffNodes;
     private float robotSpawnHeight = 0.75f;
     private string warehouseIdToLoad = "a7b79220-1687-4f11-9f69-f2e0c2345e86";
 
@@ -27,6 +31,8 @@ public class WarehouseManager : MonoBehaviour
     public void GenerateWarehouse()
     {
         PathGenerator generator = new();
+        RackGenerator rackGenerator = new();
+        DropoffGenerator dropoffGenerator = new();
 
         Grid = generator.Generate(
             width,
@@ -34,16 +40,31 @@ public class WarehouseManager : MonoBehaviour
             pathRatio,
             straightBias);
 
+
+        rackGenerator.GenerateRacks(Grid, Random.Range(2, 4));
+        dropoffGenerator.GenerateDropoffs(Grid, 1);
+
         renderer.Render(Grid, cellSize);
+        warehouseContainer.transform.position = new Vector3(Grid.Height / 2f, 0, Grid.Width / 2f);
+
+        gameObject.transform.SetParent(warehouseContainer.transform);
+
         SpawnRobot();
+
     }
     private void SpawnRobot()
     {
-        List<GridNode> parkingNodes = Grid.GetNodesOfType(CellType.Parking);
+        parkingNodes = Grid.GetNodesOfType(CellType.Parking);
+        dropoffNodes = Grid.GetNodesOfType(CellType.DropoffFront);
 
         if (parkingNodes.Count == 0)
         {
             Debug.LogWarning("No parking nodes found.");
+            return;
+        }
+        if (dropoffNodes.Count == 0)
+        {
+            Debug.LogWarning("No dropoff nodes found.");
             return;
         }
 
@@ -55,7 +76,8 @@ public class WarehouseManager : MonoBehaviour
         GameObject robotObject = Instantiate(
             robotPrefab,
             spawnPosition,
-            Quaternion.identity);
+            Quaternion.identity,
+            gameObject.transform);
 
         RobotController robot =
             robotObject.GetComponent<RobotController>();

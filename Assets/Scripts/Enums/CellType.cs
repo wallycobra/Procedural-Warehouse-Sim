@@ -3,5 +3,9 @@ public enum CellType
     Floor,
     Path,
     Rack,
-    Parking
+    Parking,
+    DropoffFront,
+    DropoffBack,
+    Pickup
+
 }

@@ -115,18 +115,21 @@ public class WarehouseGrid
 
     public GridNode GetAdjacentPathNode(GridNode node)
     {
-        Vector2Int[] directions =
+        if (node == null)
         {
-            Vector2Int.up,
-            Vector2Int.down,
-            Vector2Int.left,
-            Vector2Int.right
+            return null;
+        }
+
+        GridNode[] neighbors =
+        {
+            node.North,
+            node.South,
+            node.East,
+            node.West
         };
 
-        foreach (Vector2Int direction in directions)
+        foreach (GridNode neighbor in neighbors)
         {
-            GridNode neighbor = GetNode(node.X + direction.x, node.Z + direction.y);
-
             if (neighbor != null && neighbor.CellType == CellType.Path)
             {
                 return neighbor;

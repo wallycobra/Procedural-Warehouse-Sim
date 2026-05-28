@@ -9,6 +9,10 @@ public class WarehouseRenderer : MonoBehaviour
     [SerializeField] private GameObject pathPrefabCorner;
     [SerializeField] private GameObject pathPrefabThreeWay;
     [SerializeField] private GameObject pathPrefabDeadEnd;
+    [SerializeField] private GameObject rackPrefab;
+    [SerializeField] private GameObject dropoffFrontPrefab;
+    [SerializeField] private GameObject dropoffBackPrefab;
+    [SerializeField] private GameObject pickupPrefab;
 
     public void Render(
         WarehouseGrid grid,
@@ -31,6 +35,7 @@ public class WarehouseRenderer : MonoBehaviour
     {
         GameObject prefab;
         Quaternion rotation = Quaternion.identity;
+        float yOffset = 0f;
 
         if (node.CellType == CellType.Path)
         {
@@ -62,7 +67,25 @@ public class WarehouseRenderer : MonoBehaviour
                     prefab = pathPrefab;
                     break;
             }
-}
+        }
+        else if(node.CellType == CellType.Rack)
+        {
+            prefab = rackPrefab;
+            yOffset = 2f;
+        }
+        else if(node.CellType == CellType.DropoffFront)
+        {
+            prefab = dropoffFrontPrefab;
+        }
+        else if(node.CellType == CellType.DropoffBack)
+        {
+            prefab = dropoffBackPrefab;
+            yOffset = 0.66f;
+        }
+        else if(node.CellType == CellType.Pickup)
+        {
+            prefab = pickupPrefab;
+        }
         else
         {
             prefab = node.CellType switch
@@ -70,9 +93,11 @@ public class WarehouseRenderer : MonoBehaviour
                 CellType.Parking => parkingPrefab,
                 _ => floorPrefab
             };
+            rotation = GetParkingRotation(node);
         }
 
         Vector3 worldPosition = node.GetWorldPosition(cellSize);
+        worldPosition.y += yOffset;
 
         GameObject spawned = Instantiate(
             prefab,
@@ -91,6 +116,30 @@ public class WarehouseRenderer : MonoBehaviour
         }
     }
 
+    private Quaternion GetParkingRotation(GridNode node)
+    {
+        if (node.HasNorthPath)
+        {
+            return Quaternion.Euler(0f, 0f, 0f);
+        }
+
+        if (node.HasEastPath)
+        {
+            return Quaternion.Euler(0f, 90f, 0f);
+        }
+
+        if (node.HasSouthPath)
+        {
+            return Quaternion.Euler(0f, 180f, 0f);
+        }
+
+        if (node.HasWestPath)
+        {
+            return Quaternion.Euler(0f, 270f, 0f);
+        }
+
+        return Quaternion.identity;
+    }
     private Quaternion GetStraightRotation(GridNode node)
     {
         bool north = node.HasNorthPath;
