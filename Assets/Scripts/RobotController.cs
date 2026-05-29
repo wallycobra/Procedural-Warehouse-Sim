@@ -4,67 +4,151 @@ using UnityEngine;
 
 public class RobotController : MonoBehaviour
 {
+    private static WaitForSeconds _waitForSeconds1 = new WaitForSeconds(1f);
     [SerializeField] private float moveSpeed = 3f;
     [SerializeField] private float rotationSpeed = 8f;
+
+    [Header("Load")]
     [SerializeField] private GameObject loadPosition;
     [SerializeField] private Rigidbody carriedObject;
     [SerializeField] private float throwForce = 1f;
     [SerializeField] private float upwardForce = 1f;
+    private bool isCarryingItem;
+    private bool isMoving;
 
     private WarehouseGrid grid;
     private float cellSize;
     private Transform warehouseTransform;
+    private RobotPathfinder pathfinder;
 
-    public void Initialize(WarehouseGrid warehouseGrid, GridNode startParkingNode, float gridCellSize, Transform warehouseTransform)
+    public GridNode CurrentNode { get; private set; }
+
+    public void Initialize(
+        WarehouseGrid warehouseGrid,
+        GridNode startParkingNode,
+        float gridCellSize,
+        Transform warehouseTransform)
     {
         grid = warehouseGrid;
         cellSize = gridCellSize;
         this.warehouseTransform = warehouseTransform;
 
-        GridNode startPathNode = grid.GetAdjacentPathNode(startParkingNode);
+        pathfinder = new RobotPathfinder(grid);
 
-        if (startPathNode == null)
+        CurrentNode = startParkingNode;
+
+        Vector3 startPosition = startParkingNode.GetWorldPosition(cellSize);
+        startPosition.y = transform.localPosition.y;
+        transform.localPosition = startPosition;
+
+        StartCoroutine(MissionLoop());
+    }
+
+    private IEnumerator MissionLoop()
+    {
+        while (true)
         {
-            Debug.LogWarning("Start parking node has no adjacent path.");
-            return;
+            GridNode pickupNode = GetRandomPickupNode();
+
+            if (pickupNode == null)
+            {
+                Debug.LogWarning("No pickup node found.");
+                yield break;
+            }
+
+            yield return GoToPickup(pickupNode);
+
+            GridNode dropoffNode = GetRandomDropoffNode();
+
+            if (dropoffNode == null)
+            {
+                Debug.LogWarning("No dropoff node found.");
+                yield break;
+            }
+
+            yield return GoToDropoff(dropoffNode);
+
+            GridNode parkingNode =
+                GetRandomDifferentParkingNode(CurrentNode);
+
+            if (parkingNode == null)
+            {
+                Debug.LogWarning("No parking node found.");
+                yield break;
+            }
+
+            yield return GoToParking(parkingNode);
+
+            yield return _waitForSeconds1;
+        }
+    }
+
+    public IEnumerator GoToPickup(GridNode pickupNode)
+    {
+        yield return GoToNode(pickupNode);
+
+        yield return PickUpItem();
+    }
+
+    public IEnumerator GoToDropoff(GridNode dropoffNode)
+    {
+        yield return GoToNode(dropoffNode);
+
+        yield return ThrowJunk();
+    }
+
+    public IEnumerator GoToParking(GridNode parkingNode)
+    {
+        yield return GoToNode(parkingNode);
+
+        yield return RotateAroundInParking();
+    }
+
+    private IEnumerator GoToNode(GridNode targetNode)
+    {
+        if (CurrentNode == null || targetNode == null)
+        {
+            Debug.LogWarning("Current node or target node is null.");
+            yield break;
         }
 
-        GridNode endDropoffNode = GetRandomDropoffNode();
+        GridNode startPathNode = grid.GetAdjacentPathNode(CurrentNode);
+        GridNode targetPathNode = grid.GetAdjacentPathNode(targetNode);
 
-        if (endDropoffNode == null)
+        if (startPathNode == null || targetPathNode == null)
         {
-            Debug.LogWarning("No valid destination dropoff node found.");
-            return;
+            Debug.LogWarning($"Could not find adjacent path node for route to {targetNode.CellType}.");
+            yield break;
         }
 
-        GridNode endPathNode = grid.GetAdjacentPathNode(endDropoffNode);
-
-        if (endPathNode == null)
-        {
-            Debug.LogWarning("Dropoff node has no adjacent path.");
-            return;
-        }
-
-        RobotPathfinder pathfinder = new(grid);
-
-        List<GridNode> path = pathfinder.FindPath(startPathNode, endPathNode);
+        List<GridNode> path = pathfinder.FindPath(startPathNode, targetPathNode);
 
         if (path.Count == 0)
         {
-            Debug.LogWarning("Robot could not find path.");
-            return;
+            Debug.LogWarning($"No path found to {targetNode.CellType}.");
+            yield break;
         }
 
-        path.Insert(0, startParkingNode);
-        path.Add(endDropoffNode);
+        path.Insert(0, CurrentNode);
+        path.Add(targetNode);
 
-        StartCoroutine(FollowPath(path));
+        yield return FollowPath(path);
+
+        CurrentNode = targetNode;
     }
 
-    private GridNode GetRandomPathNode()
+    private IEnumerator PickUpItem()
     {
-        List<GridNode> pathNodes = grid.GetNodesOfType(CellType.Path);
-        return pathNodes[Random.Range(0, pathNodes.Count)];
+        yield return _waitForSeconds1;
+        GameObject item = Instantiate(
+            Resources.Load<GameObject>("item"),
+            loadPosition.transform.position,
+            Quaternion.identity,
+            loadPosition.transform);
+        carriedObject = item.GetComponent<Rigidbody>();    
+        isCarryingItem = true;
+
+        Debug.Log("Robot picked up item.");
     }
 
     private IEnumerator FollowPath(List<GridNode> path)
@@ -76,9 +160,7 @@ public class RobotController : MonoBehaviour
 
             while (Vector3.Distance(transform.localPosition, targetLocalPosition) > 0.05f)
             {
-                Vector3 localDirection =
-                    targetLocalPosition - transform.localPosition;
-
+                Vector3 localDirection = targetLocalPosition - transform.localPosition;
                 localDirection.y = 0f;
 
                 if (localDirection.sqrMagnitude > 0.001f)
@@ -102,30 +184,20 @@ public class RobotController : MonoBehaviour
 
             transform.localPosition = targetLocalPosition;
         }
-        GridNode finalNode = path[^1];
-
-        if (finalNode.CellType == CellType.Parking)
-        {
-            yield return RotateToFaceAdjacentPath(finalNode);
-        }
-        if (finalNode.CellType == CellType.DropoffFront)
-        {
-            yield return ThrowJunk();
-        }
     }
-    private GridNode GetRandomDifferentParkingNode(GridNode startParkingNode)
+
+    private GridNode GetRandomPickupNode()
     {
-        List<GridNode> parkingNodes = grid.GetNodesOfType(CellType.Parking);
+        List<GridNode> pickupNodes = grid.GetNodesOfType(CellType.Pickup);
 
-        parkingNodes.Remove(startParkingNode);
-
-        if (parkingNodes.Count == 0)
+        if (pickupNodes.Count == 0)
         {
             return null;
         }
 
-        return parkingNodes[Random.Range(0, parkingNodes.Count)];
+        return pickupNodes[Random.Range(0, pickupNodes.Count)];
     }
+
     private GridNode GetRandomDropoffNode()
     {
         List<GridNode> dropoffNodes = grid.GetNodesOfType(CellType.DropoffFront);
@@ -138,60 +210,39 @@ public class RobotController : MonoBehaviour
         return dropoffNodes[Random.Range(0, dropoffNodes.Count)];
     }
 
+    private GridNode GetRandomDifferentParkingNode(GridNode currentNode)
+    {
+        List<GridNode> parkingNodes = grid.GetNodesOfType(CellType.Parking);
+
+        parkingNodes.Remove(currentNode);
+
+        if (parkingNodes.Count == 0)
+        {
+            return null;
+        }
+
+        return parkingNodes[Random.Range(0, parkingNodes.Count)];
+    }
+
     private IEnumerator RotateAroundInParking()
     {
         Quaternion startRotation = transform.localRotation;
-
         Quaternion targetRotation =
             startRotation * Quaternion.Euler(0f, 180f, 0f);
 
-        while (Quaternion.Angle(transform.localRotation, targetRotation) > .5f)
+        while (Quaternion.Angle(transform.localRotation, targetRotation) > 0.5f)
         {
             transform.localRotation = Quaternion.Slerp(
                 transform.localRotation,
                 targetRotation,
-                4 * Time.deltaTime);
+                rotationSpeed * Time.deltaTime);
 
             yield return null;
         }
 
         transform.localRotation = targetRotation;
     }
-    private IEnumerator RotateToFaceAdjacentPath(GridNode parkingNode)
-    {
-        GridNode pathNode = grid.GetAdjacentPathNode(parkingNode);
 
-        if (pathNode == null)
-        {
-            yield break;
-        }
-
-        Vector3 parkingPosition = parkingNode.GetWorldPosition(cellSize);
-        Vector3 pathPosition = pathNode.GetWorldPosition(cellSize);
-
-        Vector3 direction = pathPosition - parkingPosition;
-        direction.y = 0f;
-
-        if (direction.sqrMagnitude <= 0.001f)
-        {
-            yield break;
-        }
-
-        Quaternion targetRotation =
-            Quaternion.LookRotation(direction.normalized);
-
-        while (Quaternion.Angle(transform.localRotation, targetRotation) > 1f)
-        {
-            transform.localRotation = Quaternion.Slerp(
-                transform.localRotation,
-                targetRotation,
-                4 * Time.deltaTime);
-
-            yield return null;
-        }
-
-        transform.localRotation = targetRotation;
-    }
     private IEnumerator ThrowJunk()
     {
         if (carriedObject == null)
@@ -201,34 +252,30 @@ public class RobotController : MonoBehaviour
 
         yield return new WaitForSeconds(2);
 
-        // Detach from robot
         carriedObject.transform.SetParent(warehouseTransform);
-
-        // Re-enable physics
         carriedObject.isKinematic = false;
 
-        // Throw direction = robot forward
         Vector3 throwDirection =
             transform.forward + Vector3.up * 2f;
 
         throwDirection.Normalize();
 
-        // Clear old velocity just in case
         carriedObject.linearVelocity = Vector3.zero;
         carriedObject.angularVelocity = Vector3.zero;
 
-        // Apply force
         carriedObject.AddForce(
             throwDirection * throwForce,
             ForceMode.Impulse);
 
-        // Optional spin
         carriedObject.AddTorque(
             Random.insideUnitSphere * upwardForce,
             ForceMode.Impulse);
 
+        Destroy(carriedObject.gameObject, 5f);
         carriedObject = null;
+        isCarryingItem = false;
 
-        yield return null;
+        yield return new WaitForSeconds(1f);
+
     }
 }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class DragRotate : MonoBehaviour
 {
@@ -15,6 +16,11 @@ public class DragRotate : MonoBehaviour
     }
     private void Update()
     {
+        if (EventSystem.current != null &&
+        EventSystem.current.IsPointerOverGameObject())
+        {
+            return;
+        }
         // Start dragging
         if (Input.GetMouseButtonDown(0))
         {
