@@ -10,7 +10,7 @@ public class SimulationSpeedController : MonoBehaviour
     private void Start()
     {
         speedSlider.minValue = 1;
-        speedSlider.maxValue = 100;
+        speedSlider.maxValue = 10;
         speedSlider.wholeNumbers = true;
 
         speedSlider.value = 1;

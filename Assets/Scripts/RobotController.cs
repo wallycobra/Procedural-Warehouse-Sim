@@ -22,16 +22,20 @@ public class RobotController : MonoBehaviour
     private RobotPathfinder pathfinder;
 
     public GridNode CurrentNode { get; private set; }
+    private bool isShuttingDown;
+
 
     public void Initialize(
         WarehouseGrid warehouseGrid,
         GridNode startParkingNode,
         float gridCellSize,
-        Transform warehouseTransform)
+        Transform warehouseTransform,
+        bool isShuttingDown)
     {
         grid = warehouseGrid;
         cellSize = gridCellSize;
         this.warehouseTransform = warehouseTransform;
+        this.isShuttingDown = isShuttingDown;
 
         pathfinder = new RobotPathfinder(grid);
 
@@ -42,6 +46,12 @@ public class RobotController : MonoBehaviour
         transform.localPosition = startPosition;
 
         StartCoroutine(MissionLoop());
+    }
+
+    public void Shutdown()
+    {
+        isShuttingDown = true;
+        StopAllCoroutines();
     }
 
     private IEnumerator MissionLoop()
@@ -106,6 +116,16 @@ public class RobotController : MonoBehaviour
 
     private IEnumerator GoToNode(GridNode targetNode)
     {
+        if (CurrentNode == null)
+        {
+            yield break;
+        }
+
+        if (grid == null)
+        {
+            yield break;
+        }
+
         if (CurrentNode == null || targetNode == null)
         {
             Debug.LogWarning("Current node or target node is null.");
@@ -155,6 +175,11 @@ public class RobotController : MonoBehaviour
     {
         foreach (GridNode node in path)
         {
+            if (isShuttingDown)
+            {
+                yield break;
+            }
+
             Vector3 targetLocalPosition = node.GetWorldPosition(cellSize);
             targetLocalPosition.y = transform.localPosition.y;
 
@@ -188,40 +213,40 @@ public class RobotController : MonoBehaviour
 
     private GridNode GetRandomPickupNode()
     {
-        List<GridNode> pickupNodes = grid.GetNodesOfType(CellType.Pickup);
+        WarehouseManager.pickupNodes = grid.GetNodesOfType(CellType.Pickup);
 
-        if (pickupNodes.Count == 0)
+        if (WarehouseManager.pickupNodes.Count == 0)
         {
             return null;
         }
 
-        return pickupNodes[Random.Range(0, pickupNodes.Count)];
+        return WarehouseManager.pickupNodes[Random.Range(0, WarehouseManager.pickupNodes.Count)];
     }
 
     private GridNode GetRandomDropoffNode()
     {
-        List<GridNode> dropoffNodes = grid.GetNodesOfType(CellType.DropoffFront);
+        WarehouseManager.dropoffNodes = grid.GetNodesOfType(CellType.DropoffFront);
 
-        if (dropoffNodes.Count == 0)
+        if (WarehouseManager.dropoffNodes.Count == 0)
         {
             return null;
         }
 
-        return dropoffNodes[Random.Range(0, dropoffNodes.Count)];
+        return WarehouseManager.dropoffNodes[Random.Range(0, WarehouseManager.dropoffNodes.Count)];
     }
 
     private GridNode GetRandomDifferentParkingNode(GridNode currentNode)
     {
-        List<GridNode> parkingNodes = grid.GetNodesOfType(CellType.Parking);
+        WarehouseManager.parkingNodes = grid.GetNodesOfType(CellType.Parking);
 
-        parkingNodes.Remove(currentNode);
+        WarehouseManager.parkingNodes.Remove(currentNode);
 
-        if (parkingNodes.Count == 0)
+        if (WarehouseManager.parkingNodes.Count == 0)
         {
             return null;
         }
 
-        return parkingNodes[Random.Range(0, parkingNodes.Count)];
+        return WarehouseManager.parkingNodes[Random.Range(0, WarehouseManager.parkingNodes.Count)];
     }
 
     private IEnumerator RotateAroundInParking()

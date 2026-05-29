@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -16,8 +17,9 @@ public class WarehouseManager : MonoBehaviour
     [SerializeField] private GameObject robotPrefab;
     [SerializeField] private GameObject warehouseContainer;
 
-    [SerializeField] private List<GridNode> parkingNodes;
-    [SerializeField] private List<GridNode> dropoffNodes;
+    [SerializeField] public static List<GridNode> parkingNodes;
+    [SerializeField] public static List<GridNode> dropoffNodes;
+    [SerializeField] public static List<GridNode> pickupNodes;
     private float robotSpawnHeight = 0.75f;
     private string warehouseIdToLoad = "a7b79220-1687-4f11-9f69-f2e0c2345e86";
 
@@ -46,11 +48,45 @@ public class WarehouseManager : MonoBehaviour
 
         renderer.Render(Grid, cellSize);
         warehouseContainer.transform.position = new Vector3(Grid.Height / 2f, 0, Grid.Width / 2f);
-
-        gameObject.transform.SetParent(warehouseContainer.transform);
+        gameObject.transform.SetParent(warehouseContainer.transform, true);
 
         SpawnRobot();
+    }
 
+    public void RegenerateWarehouse()
+    {
+        StartCoroutine(RegenerateWarehouseRoutine());
+    }
+
+    private IEnumerator RegenerateWarehouseRoutine()
+    {
+        RobotController[] robots = GetComponentsInChildren<RobotController>();
+
+        foreach (RobotController robot in robots)
+        {
+            robot.StopAllCoroutines();
+            {
+                robot.Shutdown();
+            }
+        }
+
+        foreach (Transform child in transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        pickupNodes.Clear();
+        dropoffNodes.Clear();
+        parkingNodes.Clear();
+
+        transform.SetParent(null);
+        transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        warehouseContainer.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        
+        yield return new WaitForSeconds(1);
+        yield return null;
+
+        GenerateWarehouse();
     }
     private void SpawnRobot()
     {
@@ -87,8 +123,7 @@ public class WarehouseManager : MonoBehaviour
             Debug.LogError("Robot prefab is missing RobotController.");
             return;
         }
-
-        robot.Initialize(Grid, parkingNode, cellSize, warehouseContainer.transform);
+        robot.Initialize(Grid, parkingNode, cellSize, warehouseContainer.transform, false);
     }
 
     public void SaveCurrentWarehouse()
