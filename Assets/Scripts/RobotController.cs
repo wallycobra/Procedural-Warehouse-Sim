@@ -11,8 +11,8 @@ public class RobotController : MonoBehaviour
     [Header("Load")]
     [SerializeField] private GameObject loadPosition;
     [SerializeField] private Rigidbody carriedObject;
-    [SerializeField] private float throwForce = 1f;
-    [SerializeField] private float upwardForce = 1f;
+    [SerializeField] private float throwForce;
+    [SerializeField] private float upwardForce;
     private bool isCarryingItem;
     private bool isMoving;
 
@@ -211,6 +211,7 @@ public class RobotController : MonoBehaviour
         }
     }
 
+
     private GridNode GetRandomPickupNode()
     {
         WarehouseManager.pickupNodes = grid.GetNodesOfType(CellType.Pickup);
@@ -275,6 +276,7 @@ public class RobotController : MonoBehaviour
             yield break;
         }
 
+        throwForce = Random.Range(3.0f, 5.5f);
         yield return new WaitForSeconds(2);
 
         carriedObject.transform.SetParent(warehouseTransform);

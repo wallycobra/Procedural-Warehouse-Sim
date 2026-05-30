@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class WarehouseRenderer : MonoBehaviour
@@ -13,6 +14,12 @@ public class WarehouseRenderer : MonoBehaviour
     [SerializeField] private GameObject dropoffFrontPrefab;
     [SerializeField] private GameObject dropoffBackPrefab;
     [SerializeField] private GameObject pickupPrefab;
+
+    [Header("Spawn Animation")]
+    [SerializeField] private bool animateSpawn = true;
+    [SerializeField] private float spawnHeight = 25f;
+    [SerializeField] private float dropDuration = 0.4f;
+    [SerializeField] private float staggerDelay = 0.01f;
 
     public void Render(
         WarehouseGrid grid,
@@ -68,21 +75,21 @@ public class WarehouseRenderer : MonoBehaviour
                     break;
             }
         }
-        else if(node.CellType == CellType.Rack)
+        else if (node.CellType == CellType.Rack)
         {
             prefab = rackPrefab;
             yOffset = 2f;
         }
-        else if(node.CellType == CellType.DropoffFront)
+        else if (node.CellType == CellType.DropoffFront)
         {
             prefab = dropoffFrontPrefab;
         }
-        else if(node.CellType == CellType.DropoffBack)
+        else if (node.CellType == CellType.DropoffBack)
         {
             prefab = dropoffBackPrefab;
             yOffset = 0.66f;
         }
-        else if(node.CellType == CellType.Pickup)
+        else if (node.CellType == CellType.Pickup)
         {
             prefab = pickupPrefab;
         }
@@ -93,21 +100,41 @@ public class WarehouseRenderer : MonoBehaviour
                 CellType.Parking => parkingPrefab,
                 _ => floorPrefab
             };
+
             rotation = GetParkingRotation(node);
         }
 
-        Vector3 worldPosition = node.GetWorldPosition(cellSize);
-        worldPosition.y += yOffset;
+        Vector3 finalPosition = node.GetWorldPosition(cellSize);
+        finalPosition.y += yOffset;
+
+        Vector3 startPosition = finalPosition + Vector3.up * spawnHeight;
 
         GameObject spawned = Instantiate(
             prefab,
-            worldPosition,
+            startPosition,
             rotation,
             transform);
 
         node.VisualObject = spawned;
-    }
 
+        if (animateSpawn)
+        {
+            float delay =
+                (node.X + node.Z) * staggerDelay;
+
+            StartCoroutine(
+                DropIntoPlace(
+                    spawned.transform,
+                    startPosition,
+                    finalPosition,
+                    delay));
+        }
+        else
+        {
+            spawned.transform.localPosition = finalPosition;
+        }
+    }
+    
     private void Clear()
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
@@ -210,7 +237,6 @@ public class WarehouseRenderer : MonoBehaviour
 
         return Quaternion.identity;
     }
-
     private Quaternion GetThreeWayRotation(GridNode node)
     {
         bool north = node.HasNorthPath;
@@ -245,5 +271,33 @@ public class WarehouseRenderer : MonoBehaviour
         }
 
         return Quaternion.identity;
+    }
+
+    private IEnumerator DropIntoPlace(
+    Transform target,
+    Vector3 startPosition,
+    Vector3 endPosition,
+    float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        float elapsed = 0f;
+
+        while (elapsed < dropDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            float t = elapsed / dropDuration;
+            t = Mathf.SmoothStep(0f, 1f, t);
+
+            target.localPosition = Vector3.Lerp(
+                startPosition,
+                endPosition,
+                t);
+
+            yield return null;
+        }
+
+        target.localPosition = endPosition;
     }
 }

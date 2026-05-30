@@ -17,9 +17,17 @@ public class WarehouseManager : MonoBehaviour
     [SerializeField] private GameObject robotPrefab;
     [SerializeField] private GameObject warehouseContainer;
 
+    [Header("Regenerate Animation")]
+    [SerializeField] private float regenerateDropDistance = 40f;
+    [SerializeField] private float regenerateDropDuration = 0.35f;
+    [SerializeField] private float regenerateStaggerDelay = 0.005f;
+    [SerializeField] private bool isRegenerating;
+
     [SerializeField] public static List<GridNode> parkingNodes;
     [SerializeField] public static List<GridNode> dropoffNodes;
     [SerializeField] public static List<GridNode> pickupNodes;
+    [SerializeField] private float dropDuration = 0.4f;
+    [SerializeField] private float spawnHeight = 25f;
     private float robotSpawnHeight = 0.75f;
     private string warehouseIdToLoad = "a7b79220-1687-4f11-9f69-f2e0c2345e86";
 
@@ -55,25 +63,48 @@ public class WarehouseManager : MonoBehaviour
 
     public void RegenerateWarehouse()
     {
+        if (isRegenerating)
+        {
+            return;
+        }
+
         StartCoroutine(RegenerateWarehouseRoutine());
     }
 
     private IEnumerator RegenerateWarehouseRoutine()
     {
-        RobotController[] robots = GetComponentsInChildren<RobotController>();
+        isRegenerating = true;
+
+        RobotController[] robots =
+            GetComponentsInChildren<RobotController>(true);
 
         foreach (RobotController robot in robots)
         {
-            robot.StopAllCoroutines();
-            {
-                robot.Shutdown();
-            }
+            robot.Shutdown();
         }
+
+        List<Transform> children = new();
 
         foreach (Transform child in transform)
         {
-            Destroy(child.gameObject);
+            children.Add(child);
         }
+
+        for (int i = 0; i < children.Count; i++)
+        {
+            if (children[i] != null)
+            {
+                float delay = Random.Range(0f, 0.6f);
+
+                StartCoroutine(DropOutAndDestroy(
+                    children[i],
+                    delay));
+            }
+        }
+
+        float totalWait = regenerateDropDuration + 0.6f;
+
+        yield return new WaitForSeconds(totalWait);
 
         pickupNodes.Clear();
         dropoffNodes.Clear();
@@ -82,11 +113,12 @@ public class WarehouseManager : MonoBehaviour
         transform.SetParent(null);
         transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         warehouseContainer.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-        
-        yield return new WaitForSeconds(1);
+
         yield return null;
 
         GenerateWarehouse();
+
+        isRegenerating = false;
     }
     private void SpawnRobot()
     {
@@ -98,22 +130,30 @@ public class WarehouseManager : MonoBehaviour
             Debug.LogWarning("No parking nodes found.");
             return;
         }
+
         if (dropoffNodes.Count == 0)
         {
             Debug.LogWarning("No dropoff nodes found.");
             return;
         }
 
-        GridNode parkingNode = parkingNodes[Random.Range(0, parkingNodes.Count)];
+        GridNode parkingNode =
+            parkingNodes[Random.Range(0, parkingNodes.Count)];
 
-        Vector3 spawnPosition = parkingNode.GetWorldPosition(cellSize);
-        spawnPosition.y = robotSpawnHeight;
+        Vector3 finalPosition =
+            parkingNode.GetWorldPosition(cellSize);
+
+        finalPosition.y = robotSpawnHeight;
+
+        Vector3 startPosition =
+            finalPosition + Vector3.up * spawnHeight;
 
         GameObject robotObject = Instantiate(
             robotPrefab,
-            spawnPosition,
-            Quaternion.identity,
             gameObject.transform);
+
+        robotObject.transform.localPosition = startPosition;
+        robotObject.transform.localRotation = Quaternion.identity;
 
         RobotController robot =
             robotObject.GetComponent<RobotController>();
@@ -123,7 +163,32 @@ public class WarehouseManager : MonoBehaviour
             Debug.LogError("Robot prefab is missing RobotController.");
             return;
         }
-        robot.Initialize(Grid, parkingNode, cellSize, warehouseContainer.transform, false);
+
+        StartCoroutine(SpawnRobotRoutine(
+            robot,
+            parkingNode,
+            startPosition,
+            finalPosition));
+    }
+
+    private IEnumerator SpawnRobotRoutine(
+    RobotController robot,
+    GridNode parkingNode,
+    Vector3 startPosition,
+    Vector3 finalPosition)
+    {
+        yield return DropIntoPlace(
+            robot.transform,
+            startPosition,
+            finalPosition,
+            0.5f);
+
+        robot.Initialize(
+            Grid,
+            parkingNode,
+            cellSize,
+            warehouseContainer.transform,
+            false);
     }
 
     public void SaveCurrentWarehouse()
@@ -167,5 +232,75 @@ public class WarehouseManager : MonoBehaviour
         SpawnRobot();
 
         Debug.Log($"Loaded warehouse: {saveData.name}");
+    }
+    private IEnumerator DropIntoPlace(
+    Transform target,
+    Vector3 startPosition,
+    Vector3 endPosition,
+    float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        float elapsed = 0f;
+
+        while (elapsed < dropDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            float t = elapsed / dropDuration;
+            t = Mathf.SmoothStep(0f, 1f, t);
+
+            target.localPosition = Vector3.Lerp(
+                startPosition,
+                endPosition,
+                t);
+
+            yield return null;
+        }
+
+        target.localPosition = endPosition;
+    }
+
+    private IEnumerator DropOutAndDestroy(
+    Transform target,
+    float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        if (target == null)
+        {
+            yield break;
+        }
+
+        Vector3 startPosition = target.localPosition;
+        Vector3 endPosition =
+            startPosition + Vector3.down * regenerateDropDistance;
+
+        float elapsed = 0f;
+
+        while (elapsed < regenerateDropDuration)
+        {
+            if (target == null)
+            {
+                yield break;
+            }
+
+            elapsed += Time.deltaTime;
+
+            float t = elapsed / regenerateDropDuration;
+            t = Mathf.SmoothStep(0f, 1f, t);
+
+            target.localPosition = Vector3.Lerp(
+                startPosition,
+                endPosition,
+                t);
+
+            yield return null;
+        }
+
+        if (target != null)
+        {
+            Destroy(target.gameObject);
+        }
     }
 }
