@@ -13,6 +13,10 @@ public class RobotController : MonoBehaviour
     [SerializeField] private Rigidbody carriedObject;
     [SerializeField] private float throwForce;
     [SerializeField] private float upwardForce;
+
+    [SerializeField] private AudioSource movementAudioSource;
+    private Coroutine moveSoundRoutine;
+
     private bool isCarryingItem;
     private bool isMoving;
 
@@ -169,10 +173,14 @@ public class RobotController : MonoBehaviour
         isCarryingItem = true;
 
         Debug.Log("Robot picked up item.");
+
+        AudioManager.Instance.PlaySfx(SoundType.RobotPickup);
     }
 
     private IEnumerator FollowPath(List<GridNode> path)
     {
+        StartMoveSound();
+
         foreach (GridNode node in path)
         {
             if (isShuttingDown)
@@ -209,6 +217,8 @@ public class RobotController : MonoBehaviour
 
             transform.localPosition = targetLocalPosition;
         }
+
+        StopMoveSound();
     }
 
 
@@ -302,7 +312,70 @@ public class RobotController : MonoBehaviour
         carriedObject = null;
         isCarryingItem = false;
 
+        AudioManager.Instance.PlaySfx(SoundType.RobotThrow);
+
         yield return new WaitForSeconds(1f);
 
+    }
+
+    private void StartMoveSound()
+    {
+        if (movementAudioSource == null)
+        {
+            return;
+        }
+
+        if (moveSoundRoutine != null)
+        {
+            StopCoroutine(moveSoundRoutine);
+        }
+
+        moveSoundRoutine = StartCoroutine(FadeMoveSound(1f));
+    }
+
+    private void StopMoveSound()
+    {
+        if (movementAudioSource == null)
+        {
+            return;
+        }
+
+        if (moveSoundRoutine != null)
+        {
+            StopCoroutine(moveSoundRoutine);
+        }
+
+        moveSoundRoutine = StartCoroutine(FadeMoveSound(0f));
+    }
+
+    private IEnumerator FadeMoveSound(float targetVolume)
+    {
+        if (!movementAudioSource.isPlaying)
+        {
+            movementAudioSource.Play();
+        }
+
+        float startVolume = movementAudioSource.volume;
+        float duration = 0.25f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+
+            movementAudioSource.volume = Mathf.Lerp(
+                startVolume,
+                targetVolume,
+                elapsed / duration);
+
+            yield return null;
+        }
+
+        movementAudioSource.volume = targetVolume;
+
+        if (targetVolume <= 0f)
+        {
+            movementAudioSource.Stop();
+        }
     }
 }
