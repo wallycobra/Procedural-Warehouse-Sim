@@ -342,6 +342,7 @@ GameObject:
   - component: {fileID: 1590685201426570509}
   - component: {fileID: -1310988248281352028}
   - component: {fileID: -6832115857162311935}
+  - component: {fileID: -6322314141643840053}
   m_Layer: 0
   m_Name: Robot
   m_TagString: Untagged
@@ -560,6 +561,28 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!95 &-6322314141643840053
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5188471700440258823}
+  m_Enabled: 0
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: d6cc5ba8e3f70824ab1c6f7ebd8f3bab, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &6639849424006894783
 GameObject:
   m_ObjectHideFlags: 0

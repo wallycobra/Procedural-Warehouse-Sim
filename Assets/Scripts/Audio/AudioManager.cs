@@ -39,9 +39,16 @@ public class AudioManager : MonoBehaviour
 
     public void PlaySfx(SoundType soundType)
     {
+
         if (!soundLookup.TryGetValue(soundType, out SoundEntry sound))
         {
             Debug.LogWarning($"Missing sound: {soundType}");
+            return;
+        }
+        
+        if (sound == null || sound.clip.loadState != AudioDataLoadState.Loaded)
+        {
+            Debug.LogWarning($"{sound.clip.name} is not loaded yet.");
             return;
         }
 
